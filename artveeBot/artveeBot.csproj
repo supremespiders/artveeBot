@@ -45,6 +45,24 @@
     <Reference Include="ExcelHelperEx, Version=1.0.5.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\ExcelHelperEx.1.0.5\lib\netstandard2.0\ExcelHelperEx.dll</HintPath>
     </Reference>
+    <Reference Include="Google.Apis, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.1.57.0\lib\net45\Google.Apis.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Auth, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Auth.1.57.0\lib\net461\Google.Apis.Auth.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Auth.PlatformServices, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Auth.1.57.0\lib\net461\Google.Apis.Auth.PlatformServices.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Core, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Core.1.57.0\lib\net45\Google.Apis.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Drive.v3, Version=1.57.0.2684, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Drive.v3.1.57.0.2684\lib\net45\Google.Apis.Drive.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.PlatformServices, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.1.57.0\lib\net45\Google.Apis.PlatformServices.dll</HintPath>
+    </Reference>
     <Reference Include="HtmlAgilityPack, Version=1.11.42.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
       <HintPath>..\packages\HtmlAgilityPack.1.11.42\lib\Net45\HtmlAgilityPack.dll</HintPath>
     </Reference>
@@ -72,6 +90,7 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Security" />
     <Reference Include="System.Threading.Tasks" />
     <Reference Include="System.Xml.Linq" />
@@ -103,6 +122,7 @@
     <Compile Include="Models\Utility.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\GoogleDriveService.cs" />
     <Compile Include="Services\Notifier.cs" />
     <Compile Include="Services\Scraper.cs" />
     <EmbeddedResource Include="MainForm.resx">

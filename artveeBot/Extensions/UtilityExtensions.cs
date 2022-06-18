@@ -2,6 +2,7 @@
 using artveeBot.Services;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
@@ -24,11 +25,12 @@ namespace artveeBot.Extensions
             return dictionary.TryGetValue(key, out var value) ? value : defaultValue;
         }
 
-        public static async Task Work<T2>(this List<T2> items, int maxThreads, Func<T2, Task> action)
+        public static async Task Work(this List<string> items, int maxThreads, Func<string, Task> action)
         {
             var tasks = new List<Task>();
             int i = 0;
             var worked = 0;
+            //var completed=
             do
             {
                 if (i < items.Count)
@@ -46,6 +48,8 @@ namespace artveeBot.Extensions
                     tasks.Remove(t);
                     await t;
                     worked++;
+                    DirectoryInfo dirInfo = new DirectoryInfo(@"img");
+                    long dirSize = await Task.Run(() => dirInfo.EnumerateFiles("*", SearchOption.TopDirectoryOnly).Sum(file => file.Length));
                 }
                 catch (TaskCanceledException)
                 {
@@ -96,27 +100,68 @@ namespace artveeBot.Extensions
             }
         }
 
-        public static async Task<List<T>> Work<T, T2>(this List<T2> items, int maxThreads, Func<T2, Task<T>> func)
+        public static async Task<List<Artwork>> Work(this List<Artwork> items, int maxThreads, Func<Artwork, Task<Artwork>> func)
         {
-            var tasks = new List<Task<T>>();
-            var results = new List<T>();
-            for (var i = 0; i < items.Count; i++)
+            var tasks = new List<Task<Artwork>>();
+            int i = 0;
+            var remainingArtworks = new List<Artwork>();
+            var completed = new List<string>();
+            if (File.Exists("completed"))
+                completed = File.ReadAllLines("completed").ToList();
+
+            foreach (var v in items)
             {
-                var item = items[i];
-                Notifier.Display($"Working on {i + 1} / {items.Count}");
-                tasks.Add(func(item));
-                if (tasks.Count != maxThreads) continue;
-                await tasks.WaitThenAddResult(results).ConfigureAwait(false);
+                if (completed.Contains(v.ImageLocal))
+                    continue;
+                remainingArtworks.Add(v);
             }
 
-            while (tasks.Count != 0)
+            //var completed=
+            do
             {
-                await tasks.WaitThenAddResult(results).ConfigureAwait(false);
-            }
+                if (i < remainingArtworks.Count)
+                {
+                    var item = remainingArtworks[i];
+                    Notifier.Display($"Working on {i + 1} / {remainingArtworks.Count}");
+                    tasks.Add(func(item));
+                    i++;
+                }
 
-            Notifier.Display($"completed {items.Count}");
-            return results;
+                if (tasks.Count != maxThreads && i < remainingArtworks.Count) continue;
+                try
+                {
+                    var t = await Task.WhenAny(tasks).ConfigureAwait(false);
+                    tasks.Remove(t);
+                    var artwork = await t;
+                    completed.Add(artwork.ImageLocal);
+                    if (completed.Count % 50 == 0)
+                        File.WriteAllLines("completed", completed);
+                }
+                catch (TaskCanceledException)
+                {
+                    File.WriteAllLines("completed", completed);
+                    throw;
+                }
+                catch (KnownException ex)
+                {
+                    Notifier.Error(ex.Message);
+                    var t = tasks.FirstOrDefault(x => x.IsFaulted);
+                    tasks.Remove(t);
+                }
+                catch (Exception e)
+                {
+                    Notifier.Error(e.ToString());
+                    var t = tasks.FirstOrDefault(x => x.IsFaulted);
+                    tasks.Remove(t);
+                }
+
+                if (tasks.Count == 0 && i == remainingArtworks.Count) break;
+            } while (true);
+
+            Notifier.Display($"completed {remainingArtworks.Count}");
+            return null;
         }
+
         public static async Task<List<T>> Work<T, T2>(this List<T2> items, int maxThreads, Func<T2, Task<List<T>>> func)
         {
             var tasks = new List<Task<List<T>>>();

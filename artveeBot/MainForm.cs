@@ -347,7 +347,7 @@ namespace artveeBot
             {
                 _cancellationTokenSource = new CancellationTokenSource();
                 var scraper = new Scraper((int)threadsI.Value);
-                await scraper.MainWork(_cancellationTokenSource.Token);
+                await Task.Run(()=>scraper.MainWork(_cancellationTokenSource.Token));
             }
             catch (TaskCanceledException)
             {

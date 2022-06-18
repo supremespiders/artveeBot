@@ -2,7 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -30,8 +33,8 @@ namespace artveeBot.Services
             _client = new HttpClient(new HttpClientHandler()
             {
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            }){Timeout = TimeSpan.FromSeconds(30)};
-            
+            }) { Timeout = TimeSpan.FromSeconds(30) };
+
             if (File.Exists("proxies.txt"))
             {
                 _clients = new List<HttpClient>();
@@ -49,12 +52,13 @@ namespace artveeBot.Services
                         Proxy = proxy,
                         UseCookies = false,
                         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                    }){Timeout = TimeSpan.FromSeconds(30)});
+                    }) { Timeout = TimeSpan.FromSeconds(30) });
                 }
+
                 _clients.Add(_client);
             }
         }
-        
+
         async Task<HttpClient> GetNextClient()
         {
             await _semaphore.WaitAsync();
@@ -141,16 +145,16 @@ namespace artveeBot.Services
             artworks.Save();
         }
 
-        async Task<List<ArtworkPre>> GetArtsLinks(string url,string category)
+        async Task<List<ArtworkPre>> GetArtsLinks(string url, string category)
         {
             var links = new List<ArtworkPre>();
             var client = await GetNextClient();
             do
             {
                 Notifier.Display(url);
-                var doc = await client.GetHtml(url,5).ToDoc();
+                var doc = await client.GetHtml(url, 5).ToDoc();
                 var nodes = doc.DocumentNode.SelectNodes("//div[@class='product-wrapper snax']");
-              
+
                 foreach (var node in nodes)
                 {
                     var link = node.SelectSingleNode(".//a[@class='product-image-link linko']").GetAttributeValue("href", "");
@@ -161,10 +165,10 @@ namespace artveeBot.Services
                     });
                 }
 
-                url = doc.DocumentNode.SelectSingleNode("//a[@class='next page-numbers']")?.GetAttributeValue("href","");
+                url = doc.DocumentNode.SelectSingleNode("//a[@class='next page-numbers']")?.GetAttributeValue("href", "");
                 if (url == null) break;
             } while (true);
-            
+
             return links;
         }
 
@@ -193,56 +197,57 @@ namespace artveeBot.Services
 
         async Task GetArtsByCategories()
         {
-             //var links = File.ReadAllLines("artLinks").ToList();
-             //var links = new List<ArtworkPre>();
-             var links = nameof(ArtworkPre).Load<ArtworkPre>();
-             //var y = links.ToHashSet();
-             //links.AddRange(await GetArtsLinks("https://artvee.com/c/asian-art/?per_page=1000&_pjax=.main-page-wrapper","Asian Art"));
-              // links.AddRange(await GetArtsLinks("https://artvee.com/c/abstract/?per_page=1000&_pjax=.main-page-wrapper","Abstract"));
-              // links.AddRange(await GetArtsLinks("https://artvee.com/c/figurative/?per_page=1000&_pjax=.main-page-wrapper","Figurative"));
-              // links.AddRange(await GetArtsLinks("https://artvee.com/c/landscape/?per_page=1000&_pjax=.main-page-wrapper","Landscape"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/religion/?per_page=1000&_pjax=.main-page-wrapper","Religion"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/mythology/?per_page=1000&_pjax=.main-page-wrapper","Mythology"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/posters/?per_page=1000&_pjax=.main-page-wrapper","Posters"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/drawings/?per_page=1000&_pjax=.main-page-wrapper","Drawings"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/illustration/?per_page=1000&_pjax=.main-page-wrapper","Illustration"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/still-life/?per_page=1000&_pjax=.main-page-wrapper","Still Life"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/animals/?per_page=1000&_pjax=.main-page-wrapper","Animals"));
-             links.AddRange(await GetArtsLinks("https://artvee.com/c/botanical/?per_page=1000&_pjax=.main-page-wrapper","Botanical"));
-             //File.WriteAllLines("artLinks",links);
-             links.Save();
+            //var links = File.ReadAllLines("artLinks").ToList();
+            //var links = new List<ArtworkPre>();
+            var links = nameof(ArtworkPre).Load<ArtworkPre>();
+            //var y = links.ToHashSet();
+            //links.AddRange(await GetArtsLinks("https://artvee.com/c/asian-art/?per_page=1000&_pjax=.main-page-wrapper","Asian Art"));
+            // links.AddRange(await GetArtsLinks("https://artvee.com/c/abstract/?per_page=1000&_pjax=.main-page-wrapper","Abstract"));
+            // links.AddRange(await GetArtsLinks("https://artvee.com/c/figurative/?per_page=1000&_pjax=.main-page-wrapper","Figurative"));
+            // links.AddRange(await GetArtsLinks("https://artvee.com/c/landscape/?per_page=1000&_pjax=.main-page-wrapper","Landscape"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/religion/?per_page=1000&_pjax=.main-page-wrapper", "Religion"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/mythology/?per_page=1000&_pjax=.main-page-wrapper", "Mythology"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/posters/?per_page=1000&_pjax=.main-page-wrapper", "Posters"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/drawings/?per_page=1000&_pjax=.main-page-wrapper", "Drawings"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/illustration/?per_page=1000&_pjax=.main-page-wrapper", "Illustration"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/still-life/?per_page=1000&_pjax=.main-page-wrapper", "Still Life"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/animals/?per_page=1000&_pjax=.main-page-wrapper", "Animals"));
+            links.AddRange(await GetArtsLinks("https://artvee.com/c/botanical/?per_page=1000&_pjax=.main-page-wrapper", "Botanical"));
+            //File.WriteAllLines("artLinks",links);
+            links.Save();
             //await GetArtsLinks("https://artvee.com/c/landscape/?per_page=5000");
         }
 
         async Task ParseArtworks()
         {
             var artworks = nameof(Artwork).Load<Artwork>();
-           // var artists = nameof(Artist).Load<Artist>().Select(x=>x.Url).ToHashSet();
+            // var artists = nameof(Artist).Load<Artist>().Select(x=>x.Url).ToHashSet();
             // var artistsFromArtworks = artworks.Select(x => x.ArtistUrl).ToHashSet();
             // File.WriteAllLines("ArtistUrls",artistsFromArtworks);
-           // var remaining = artistsFromArtworks.Where(x => !artists.Contains(x));
-         
-           // var pres = nameof(ArtworkPre).Load<ArtworkPre>().ToDictionary(x=>x.Url,x=>x.Category);
-           // foreach (var artwork in artworks)
-           // {
-           //     if (pres.ContainsKey(artwork.Url))
-           //         artwork.Category = pres[artwork.Url];
-           //     else
-           //         Debug.WriteLine("");
-           // }
-           //JG100000
-           var i = 0;
-           var dic = new Dictionary<string, string>();
-           foreach (var artwork in artworks)
-           {
-               i++;
-               var s ="img/JG1"+ i.ToString().PadLeft(5, '0')+".jpg";
-               artwork.ImageLocal = s;
-               dic.Add(artwork.ImageUrl,s);
-               // artwork.Title = artwork.Title.Replace("\n", "").Trim();
-           }
-          // File.WriteAllText("imgLinks",JsonConvert.SerializeObject(dic));
-            artworks.Save(); 
+            // var remaining = artistsFromArtworks.Where(x => !artists.Contains(x));
+
+            // var pres = nameof(ArtworkPre).Load<ArtworkPre>().ToDictionary(x=>x.Url,x=>x.Category);
+            // foreach (var artwork in artworks)
+            // {
+            //     if (pres.ContainsKey(artwork.Url))
+            //         artwork.Category = pres[artwork.Url];
+            //     else
+            //         Debug.WriteLine("");
+            // }
+            //JG100000
+            var i = 0;
+            var dic = new Dictionary<string, string>();
+            foreach (var artwork in artworks)
+            {
+                i++;
+                var s = "img/JG1" + i.ToString().PadLeft(5, '0') + ".jpg";
+                artwork.ImageLocal = s;
+                dic.Add(artwork.ImageUrl, s);
+                // artwork.Title = artwork.Title.Replace("\n", "").Trim();
+            }
+
+            // File.WriteAllText("imgLinks",JsonConvert.SerializeObject(dic));
+            artworks.Save();
         }
 
         async Task DownloadAllImages2(CancellationToken ct)
@@ -261,32 +266,105 @@ namespace artveeBot.Services
             //var y = dic.Keys.Count(x => x.Length > 240);
 
 
-            await links.ToList().Work(_threads, x => _client.DownloadFile(x.Key, x.Value, ct));
+            //await links.ToList().Work(_threads, x => _client.DownloadFile(x.Key, x.Value, ct));
         }
-        
+
+        async Task UploadFiles()
+        {
+            GoogleDriveService.Setup();
+            await GoogleDriveService.CreateFolderIfNotExist("img");
+
+            var t = Directory.GetFiles("comp").ToList();
+            foreach (var file in t)
+            {
+                Notifier.Log($"Uploading to google drive : {Path.GetFileName(file)}");
+                await GoogleDriveService.UploadFile(file);
+                File.Delete(file);
+                Notifier.Log("Uploading completed");
+            }
+        }
+
         async Task DownloadAllImages(CancellationToken ct)
         {
             Directory.CreateDirectory("img");
+            Directory.CreateDirectory("comp");
             Notifier.Display("Parsing images links...");
-            var artworks = nameof(Artwork).Load<Artwork>();
-            var remainingArtworks = new List<Artwork>();
-            foreach (var v in artworks)
-            {
-                if (File.Exists(v.ImageLocal)) continue;
-                remainingArtworks.Add(v);
-            }
 
-            await remainingArtworks.Work(_threads, x => Download(x, ct));
+            // await UploadFiles();
+            // await remainingArtworks.Work(_threads, x => Download(x, ct));
+            //return;
+
+            var artworks = nameof(Artwork).Load<Artwork>();
+
+
+            await artworks.Work(_threads, x => Download(x, ct));
+            return;
+            //File.WriteAllLines("completed",completed);
+
+
+            // long totalSize = 0;
+            // DirectoryInfo dirInfo = new DirectoryInfo(@"img");
+            // totalSize = await Task.Run(() => dirInfo.EnumerateFiles( "*", SearchOption.TopDirectoryOnly).Sum(file => file.Length));
+            // int idx = 1;
+            // if (File.Exists("idx"))
+            //     idx = int.Parse(File.ReadAllText("idx"));
+            // for (var i = 0; i < remainingArtworks.Count; i++)
+            // {
+            //     var remainingArtwork = remainingArtworks[i];
+            //     Notifier.Display($"Working on {i+1} / {remainingArtworks.Count}");
+            //     try
+            //     {
+            //         var size = await Download(remainingArtwork, ct);
+            //         completed.Add(remainingArtwork.ImageLocal);
+            //         totalSize += size;
+            //         if (totalSize >= 50000000000)
+            //         {
+            //             Notifier.Log("Reached milestone, compressing");
+            //             var zipName = $"comp/img{idx}.zip";
+            //             ZipFile.CreateFromDirectory("img", zipName);
+            //             Notifier.Log("compressing complete");
+            //             Directory.Delete("img", true);
+            //             Notifier.Log("Files deleted");
+            //             Directory.CreateDirectory("img");
+            //             idx++;
+            //             File.WriteAllText("idx", idx.ToString());
+            //             // Notifier.Log("Uploading to google drive");
+            //             // await GoogleDriveService.UploadFile(zipName);
+            //             // Notifier.Log("Uploading completed");
+            //         }
+            //
+            //         File.WriteAllLines("completed", completed);
+            //     }
+            //     catch (TaskCanceledException)
+            //     {
+            //         throw;
+            //     }
+            //     catch (KnownException ex)
+            //     {
+            //         Notifier.Error(ex.Message);
+            //     }
+            //     catch (Exception e)
+            //     {
+            //         Notifier.Error(e.ToString());
+            //     }
+            // }
+
+            //await remainingArtworks.Work(_threads, x => Download(x, ct));
         }
 
-        async Task Download(Artwork artwork, CancellationToken ct)
+        async Task<Artwork> Download(Artwork artwork, CancellationToken ct)
         {
             var client = _useProxies ? await GetNextClient() : _client;
             var doc = await client.GetHtml(artwork.Url, ct: ct).ToDoc();
             var imageLink = doc.DocumentNode.SelectSingleNode("(//a[@data-snax-collection='downloads'])[last()]").GetAttributeValue("href", "");
             try
             {
-                await client.DownloadFile(imageLink, artwork.ImageLocal,ct);
+                var temp = $"{artwork.ImageLocal}_temp.jpg";
+                var size = await client.DownloadFile(imageLink, temp, ct);
+                using (Image myImage = Image.FromFile( temp, true))
+                    SaveJpeg(artwork.ImageLocal, myImage, 70);
+                File.Delete(temp);
+                return artwork;
             }
             catch (TaskCanceledException)
             {
@@ -295,18 +373,55 @@ namespace artveeBot.Services
             }
         }
 
+        public static void SaveJpeg(string path, Image img, int quality)
+        {
+            if (quality < 0 || quality > 100)
+                throw new ArgumentOutOfRangeException("quality must be between 0 and 100.");
+
+            // Encoder parameter for image quality 
+            EncoderParameter qualityParam = new EncoderParameter(Encoder.Quality, quality);
+            // JPEG image codec 
+            ImageCodecInfo jpegCodec = GetEncoderInfo("image/jpeg");
+            EncoderParameters encoderParams = new EncoderParameters(1);
+            encoderParams.Param[0] = qualityParam;
+            img.Save(path, jpegCodec, encoderParams);
+        }
+
+        /// <summary> 
+        /// Returns the image codec with the given mime type 
+        /// </summary> 
+        private static ImageCodecInfo GetEncoderInfo(string mimeType)
+        {
+            // Get image codecs for all image formats 
+            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageEncoders();
+
+            // Find the correct image codec 
+            for (int i = 0; i < codecs.Length; i++)
+                if (codecs[i].MimeType == mimeType)
+                    return codecs[i];
+
+            return null;
+        }
+
+        void Resize()
+        {
+            using (Image myImage = Image.FromFile("1.jpg", true))
+                SaveJpeg("2.jpg", myImage, 70);
+        }
+
         public async Task MainWork(CancellationToken ct)
         {
-           //  var ars = nameof(ArtistPre).Load<ArtistPre>();
-           //  var y = ars.Sum(x => x.Count);
-           // await ars.SaveToExcel("artistsWorks.xlsx");
+            //  var ars = nameof(ArtistPre).Load<ArtistPre>();
+            //  var y = ars.Sum(x => x.Count);
+            // await ars.SaveToExcel("artistsWorks.xlsx");
             //await GetArtistLinks();
-             //await GetArtists(ct);
-           // await GetArtworks(ct);
+            //await GetArtists(ct);
+            // await GetArtworks(ct);
             // await GetArtsByCategories();
-           //await ParseArtworks();
+            //await ParseArtworks();
             //await Task.Run(()=>DownloadAllImages(ct), ct);
-            await DownloadAllImages(ct);
+             await DownloadAllImages(ct);
+            //Resize();
         }
     }
 }

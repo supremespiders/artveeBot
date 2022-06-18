@@ -1,7 +1,9 @@
 ﻿using artveeBot.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -128,13 +130,17 @@ namespace artveeBot.Extensions
             } while (true);
         }
 
-        public static async Task DownloadFile(this HttpClient client, string url, string localPath, CancellationToken ct)
+        public static async Task<long> DownloadFile(this HttpClient client, string url, string localPath, CancellationToken ct)
         {
-            var response = await client.GetAsync(url, ct);
+            var response = await client.GetAsync(url);
+            var size = long.Parse(response.Content.Headers.GetValues("Content-Length").First());
+            
             using (var fs = new FileStream(localPath, FileMode.Create))
             {
                 await response.Content.CopyToAsync(fs).ConfigureAwait(false);
             }
+            ct.ThrowIfCancellationRequested();
+            return size;
         }
     }
 }
