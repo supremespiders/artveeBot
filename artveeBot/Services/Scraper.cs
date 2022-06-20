@@ -25,7 +25,7 @@ namespace artveeBot.Services
         private readonly int _threads;
         private int _idx;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        private readonly bool _useProxies = false;
+        private readonly bool _useProxies = true;
 
         public Scraper(int threads)
         {
@@ -104,12 +104,17 @@ namespace artveeBot.Services
             var links = File.ReadAllLines("ArtistUrls");
             var artists = await links.ScrapeParallel(_threads, x => GetArtist(x, ct));
             artists.Save();
+            
+            
         }
 
         async Task<Artist> GetArtist(string url, CancellationToken ct)
         {
-            var doc = await _client.GetHtml($"{url}", ct: ct).ToDoc();
+            var client = _useProxies ? await GetNextClient() : _client;
+            var doc = await client.GetHtml($"{url}", ct: ct).ToDoc();
             var title = doc.DocumentNode.SelectSingleNode("//h1").InnerText;
+            if (title.Equals("Your access to this site has been limited"))
+                throw new KnownException("Throttled");
             var sub = doc.DocumentNode.SelectSingleNode("//h1/following-sibling::span/div[1]")?.InnerText.Split(',');
             var country = sub?[0].Trim();
             var date = sub?[1].Trim();
@@ -359,11 +364,11 @@ namespace artveeBot.Services
             var imageLink = doc.DocumentNode.SelectSingleNode("(//a[@data-snax-collection='downloads'])[last()]").GetAttributeValue("href", "");
             try
             {
-                var temp = $"{artwork.ImageLocal}_temp.jpg";
-                var size = await client.DownloadFile(imageLink, temp, ct);
-                using (Image myImage = Image.FromFile( temp, true))
-                    SaveJpeg(artwork.ImageLocal, myImage, 70);
-                File.Delete(temp);
+                // var temp = $"{artwork.ImageLocal}_temp.jpg";
+                var size = await client.DownloadFile(imageLink, artwork.ImageLocal, ct);
+                // using (Image myImage = Image.FromFile( temp, true))
+                //     SaveJpeg(artwork.ImageLocal, myImage, 70);
+                // File.Delete(temp);
                 return artwork;
             }
             catch (TaskCanceledException)
@@ -409,6 +414,16 @@ namespace artveeBot.Services
                 SaveJpeg("2.jpg", myImage, 70);
         }
 
+        async Task Write()
+        {
+            var artists = nameof(Artist).Load<Artist>();
+            var t = artists.Where(x => x.Name != "Your access to this site has been limited").ToList();
+            //t.Save();
+            await artists.SaveToExcel("artists.xlsx");
+            // var artworks = nameof(Artwork).Load<Artwork>();
+            // await artworks.SaveToExcel("artworks.xlsx");
+        }
+
         public async Task MainWork(CancellationToken ct)
         {
             //  var ars = nameof(ArtistPre).Load<ArtistPre>();
@@ -420,8 +435,9 @@ namespace artveeBot.Services
             // await GetArtsByCategories();
             //await ParseArtworks();
             //await Task.Run(()=>DownloadAllImages(ct), ct);
-             await DownloadAllImages(ct);
+            // await DownloadAllImages(ct);
             //Resize();
+            await Write();
         }
     }
 }
